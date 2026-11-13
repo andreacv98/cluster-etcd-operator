@@ -581,6 +581,8 @@ func ensureHostPathPVC(t testing.TB, pvcName string) {
 	nodes, err := c.Nodes().List(context.Background(), metav1.ListOptions{LabelSelector: backuphelpers.ControlPlaneNodeLabelSelector})
 	require.NoError(t, err)
 	require.NotEmpty(t, nodes.Items, "a control-plane node is required for the backup volume")
+	hostname := nodes.Items[0].Labels[corev1.LabelHostname]
+	require.NotEmpty(t, hostname, "the backup volume node must have a hostname label")
 
 	pv := corev1.PersistentVolume{
 		ObjectMeta: metav1.ObjectMeta{
@@ -591,8 +593,8 @@ func ensureHostPathPVC(t testing.TB, pvcName string) {
 			// node because hostPath directories are not shared between nodes.
 			NodeAffinity: &corev1.VolumeNodeAffinity{
 				Required: &corev1.NodeSelector{NodeSelectorTerms: []corev1.NodeSelectorTerm{{
-					MatchFields: []corev1.NodeSelectorRequirement{{
-						Key: "metadata.name", Operator: corev1.NodeSelectorOpIn, Values: []string{nodes.Items[0].Name},
+					MatchExpressions: []corev1.NodeSelectorRequirement{{
+						Key: corev1.LabelHostname, Operator: corev1.NodeSelectorOpIn, Values: []string{hostname},
 					}},
 				}}},
 			},
